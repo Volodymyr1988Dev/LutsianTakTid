@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, onBeforeUnmount } from 'vue'
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useProjectImageStore } from '../stores/projectImages.store'
-import LazyImage from '../components/ui/LazyImage.vue'
 
 const route = useRoute()
 const imageStore = useProjectImageStore()
@@ -10,7 +9,6 @@ const imageStore = useProjectImageStore()
 const projectId = route.params.id as string
 
 const sentinel = ref<HTMLElement | null>(null)
-
 const selectedImage = ref<string | null>(null)
 
 let observer: IntersectionObserver | null = null
@@ -25,19 +23,6 @@ async function loadMore() {
     12
   )
 
-  preloadImages(imageStore.images.map(i => i.url))
-
-}
-
-function preloadImages(urls: string[]) {
-
-  urls.slice(0, 4).forEach(url => {
-
-    const img = new Image()
-    img.src = url
-
-  })
-
 }
 
 function openImage(url: string) {
@@ -51,7 +36,6 @@ function closeModal() {
 onMounted(async () => {
 
   await loadMore()
-
   await nextTick()
 
   observer = new IntersectionObserver(entries => {
@@ -75,21 +59,22 @@ onBeforeUnmount(() => {
 
 <template>
 
-<div class="images-page">
+<div class="page">
 
-<h1>Project images</h1>
+<h1 class="title">Project Images</h1>
 
-<div class="grid">
+<div class="masonry">
 
   <div
     v-for="img in imageStore.images"
     :key="img.id"
-    class="image-wrapper"
+    class="card"
     @click="openImage(img.url)"
   >
 
-    <LazyImage
+    <img
       :src="img.url"
+      loading="lazy"
       class="image"
     />
 
@@ -97,17 +82,11 @@ onBeforeUnmount(() => {
 
 </div>
 
-<div
-  v-if="imageStore.loading"
-  class="loading"
->
+<div v-if="imageStore.loading" class="loading">
   Loading images...
 </div>
 
-<div
-  ref="sentinel"
-  class="sentinel"
-/>
+<div ref="sentinel" class="sentinel"></div>
 
 <div
   v-if="selectedImage"
@@ -128,9 +107,9 @@ onBeforeUnmount(() => {
 
 <style scoped>
 
-.images-page {
+.page {
 
-  max-width: 1300px;
+  max-width: 1400px;
 
   margin: auto;
 
@@ -138,51 +117,123 @@ onBeforeUnmount(() => {
 
 }
 
-.grid {
+.title {
 
-  display: grid;
+  font-size: 28px;
 
-  grid-template-columns: repeat(auto-fill,minmax(240px,1fr));
+  font-weight: 700;
 
-  gap: 16px;
+  margin-bottom: 24px;
+
+  text-align: center;
 
 }
 
-.image-wrapper {
+/* MASONRY GRID */
+
+.masonry {
+
+  column-count: 4;
+
+  column-gap: 16px;
+
+}
+
+@media (max-width: 1200px) {
+
+  .masonry {
+    column-count: 3;
+  }
+
+}
+
+@media (max-width: 800px) {
+
+  .masonry {
+    column-count: 2;
+  }
+
+}
+
+@media (max-width: 500px) {
+
+  .masonry {
+    column-count: 1;
+  }
+
+}
+
+/* CARD */
+
+.card {
+
+  break-inside: avoid;
+
+  margin-bottom: 16px;
+
+  border-radius: 14px;
+
   overflow: hidden;
-  border-radius: 12px;
+
+  cursor: zoom-in;
+
   background: #eee;
-  aspect-ratio: 4 / 3;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+
+  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+
+  transition: transform .25s ease,
+              box-shadow .25s ease;
+
 }
+
+.card:hover {
+
+  transform: translateY(-4px);
+
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+
+}
+
+/* IMAGE */
 
 .image {
 
   width: 100%;
 
-  height: 100%;
+  display: block;
 
   object-fit: cover;
 
-  cursor: zoom-in;
+  filter: blur(6px);
 
-  transition: transform .3s ease;
+  transform: scale(1.02);
+
+  transition: filter .4s ease,
+              transform .4s ease;
+
+}
+
+.image[src] {
+
+  filter: blur(0);
 
 }
 
-.image:hover {
-
-  transform: scale(1.08);
-
-}
+/* LOADING */
 
 .loading {
 
   text-align: center;
 
-  padding: 30px;
+  padding: 40px;
+
+  font-size: 18px;
+
+  color: #666;
 
 }
+
+/* SENTINEL */
 
 .sentinel {
 
@@ -190,13 +241,15 @@ onBeforeUnmount(() => {
 
 }
 
+/* MODAL */
+
 .modal {
 
   position: fixed;
 
   inset: 0;
 
-  background: rgba(0,0,0,.85);
+  background: rgba(0,0,0,.9);
 
   display: flex;
 
@@ -204,17 +257,21 @@ onBeforeUnmount(() => {
 
   justify-content: center;
 
-  z-index: 1000;
+  z-index: 2000;
+
+  backdrop-filter: blur(8px);
 
 }
 
 .modal-image {
 
-  max-width: 95%;
+  max-width: 92%;
 
-  max-height: 95%;
+  max-height: 92%;
 
   border-radius: 12px;
+
+  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
 
 }
 
