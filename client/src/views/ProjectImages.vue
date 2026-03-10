@@ -130,11 +130,11 @@ onBeforeUnmount(() => {
 
 .images-page {
 
-  max-width: 1200px;
+  max-width: 1300px;
 
   margin: auto;
 
-  padding: 20px;
+  padding: 24px;
 
 }
 
@@ -142,37 +142,37 @@ onBeforeUnmount(() => {
 
   display: grid;
 
-  grid-template-columns: repeat(auto-fill,minmax(200px,1fr));
+  grid-template-columns: repeat(auto-fill,minmax(240px,1fr));
 
-  gap: 12px;
+  gap: 16px;
 
 }
 
 .image-wrapper {
-
   overflow: hidden;
-
-  border-radius: 10px;
-
+  border-radius: 12px;
+  background: #eee;
+  aspect-ratio: 4 / 3;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
 }
 
 .image {
 
   width: 100%;
 
-  height: 200px;
+  height: 100%;
 
   object-fit: cover;
 
   cursor: zoom-in;
 
-  transition: transform .25s;
+  transition: transform .3s ease;
 
 }
 
 .image:hover {
 
-  transform: scale(1.05);
+  transform: scale(1.08);
 
 }
 
@@ -180,7 +180,7 @@ onBeforeUnmount(() => {
 
   text-align: center;
 
-  padding: 20px;
+  padding: 30px;
 
 }
 
@@ -196,7 +196,7 @@ onBeforeUnmount(() => {
 
   inset: 0;
 
-  background: rgba(0,0,0,.8);
+  background: rgba(0,0,0,.85);
 
   display: flex;
 
@@ -210,9 +210,9 @@ onBeforeUnmount(() => {
 
 .modal-image {
 
-  max-width: 90%;
+  max-width: 95%;
 
-  max-height: 90%;
+  max-height: 95%;
 
   border-radius: 12px;
 
