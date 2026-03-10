@@ -7,6 +7,8 @@ export const useProjectImageStore = defineStore('projectImages', () => {
   const images = ref<ProjectImage[]>([])
   const loading = ref(false)
   const cache = new Map<string, ProjectImage[]>()
+  const hasMore = ref(true)
+  const pages = ref(1)
 
   async function load(projectId: string) {
     loading.value = true

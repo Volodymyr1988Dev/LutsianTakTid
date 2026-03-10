@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useProjectImageStore } from '../stores/projectImages.store'
 
 const route = useRoute()
+const router = useRouter()
 const imageStore = useProjectImageStore()
 
 const projectId = route.params.id as string
@@ -31,6 +32,10 @@ function openImage(url: string) {
 
 function closeModal() {
   selectedImage.value = null
+}
+
+function goBack() {
+  router.push('/projects')
 }
 
 onMounted(async () => {
@@ -61,43 +66,53 @@ onBeforeUnmount(() => {
 
 <div class="page">
 
+<button class="back-button" @click="goBack">
+
+<span class="arrow">←</span>
+Back
+
+</button>
+
 <h1 class="title">Project Images</h1>
 
 <div class="masonry">
 
-  <div
-    v-for="img in imageStore.images"
-    :key="img.id"
-    class="card"
-    @click="openImage(img.url)"
-  >
+<div
+v-for="img in imageStore.images"
+:key="img.id"
+class="card"
+@click="openImage(img.url)"
+>
 
-    <img
-      :src="img.url"
-      loading="lazy"
-      class="image"
-    />
-
-  </div>
+<img
+:src="img.url"
+loading="lazy"
+class="image"
+/>
 
 </div>
 
-<div v-if="imageStore.loading" class="loading">
-  Loading images...
+<div
+v-if="imageStore.loading"
+v-for="i in 8"
+:key="'skeleton'+i"
+class="skeleton"
+/>
+
 </div>
 
 <div ref="sentinel" class="sentinel"></div>
 
 <div
-  v-if="selectedImage"
-  class="modal"
-  @click="closeModal"
+v-if="selectedImage"
+class="modal"
+@click="closeModal"
 >
 
-  <img
-    :src="selectedImage"
-    class="modal-image"
-  />
+<img
+:src="selectedImage"
+class="modal-image"
+/>
 
 </div>
 
@@ -107,59 +122,127 @@ onBeforeUnmount(() => {
 
 <style scoped>
 
+/* PAGE */
+
 .page {
 
-  max-width: 1400px;
+min-height: 100vh;
 
-  margin: auto;
+background: #0e0e0e;
 
-  padding: 24px;
+color: white;
+
+display: flex;
+
+flex-direction: column;
+
+align-items: center;
+
+padding: 30px;
 
 }
+
+/* TITLE */
 
 .title {
 
-  font-size: 28px;
+font-size: 28px;
 
-  font-weight: 700;
+font-weight: 700;
 
-  margin-bottom: 24px;
+margin-bottom: 24px;
 
-  text-align: center;
+text-align: center;
 
 }
 
-/* MASONRY GRID */
+/* BACK BUTTON */
+
+.back-button {
+
+position: fixed;
+
+top: 20px;
+
+left: 20px;
+
+display: flex;
+
+align-items: center;
+
+gap: 8px;
+
+background: rgba(255,255,255,0.1);
+
+color: white;
+
+border: none;
+
+padding: 10px 16px;
+
+border-radius: 12px;
+
+cursor: pointer;
+
+font-size: 14px;
+
+backdrop-filter: blur(10px);
+
+transition: all .2s;
+
+z-index: 1000;
+
+}
+
+.back-button:hover {
+
+background: rgba(255,255,255,0.2);
+
+transform: translateY(-2px);
+
+}
+
+.arrow {
+
+font-size: 18px;
+
+}
+
+/* MASONRY */
 
 .masonry {
 
-  column-count: 4;
+max-width: 1300px;
 
-  column-gap: 16px;
+width: 100%;
+
+column-count: 4;
+
+column-gap: 16px;
 
 }
 
 @media (max-width: 1200px) {
 
-  .masonry {
-    column-count: 3;
-  }
+.masonry {
+column-count: 3;
+}
 
 }
 
 @media (max-width: 800px) {
 
-  .masonry {
-    column-count: 2;
-  }
+.masonry {
+column-count: 2;
+}
 
 }
 
 @media (max-width: 500px) {
 
-  .masonry {
-    column-count: 1;
-  }
+.masonry {
+column-count: 1;
+}
 
 }
 
@@ -167,30 +250,30 @@ onBeforeUnmount(() => {
 
 .card {
 
-  break-inside: avoid;
+break-inside: avoid;
 
-  margin-bottom: 16px;
+margin-bottom: 16px;
 
-  border-radius: 14px;
+border-radius: 14px;
 
-  overflow: hidden;
+overflow: hidden;
 
-  cursor: zoom-in;
+cursor: zoom-in;
 
-  background: #eee;
+background: #1c1c1c;
 
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+box-shadow: 0 6px 18px rgba(0,0,0,0.5);
 
-  transition: transform .25s ease,
-              box-shadow .25s ease;
+transition: transform .25s ease,
+box-shadow .25s ease;
 
 }
 
 .card:hover {
 
-  transform: translateY(-4px);
+transform: translateY(-5px);
 
-  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+box-shadow: 0 12px 30px rgba(0,0,0,0.8);
 
 }
 
@@ -198,46 +281,49 @@ onBeforeUnmount(() => {
 
 .image {
 
-  width: 100%;
+width: 100%;
 
-  display: block;
+display: block;
 
-  object-fit: cover;
+object-fit: cover;
 
-  filter: blur(6px);
-
-  transform: scale(1.02);
-
-  transition: filter .4s ease,
-              transform .4s ease;
+transition: transform .35s ease;
 
 }
 
-.image[src] {
+.card:hover .image {
 
-  filter: blur(0);
-
-}
-
-/* LOADING */
-
-.loading {
-
-  text-align: center;
-
-  padding: 40px;
-
-  font-size: 18px;
-
-  color: #666;
+transform: scale(1.05);
 
 }
 
-/* SENTINEL */
+/* SKELETON */
 
-.sentinel {
+.skeleton {
 
-  height: 1px;
+height: 220px;
+
+border-radius: 14px;
+
+margin-bottom: 16px;
+
+background: linear-gradient(
+90deg,
+#1c1c1c 25%,
+#2a2a2a 37%,
+#1c1c1c 63%
+);
+
+background-size: 400% 100%;
+
+animation: skeleton 1.4s ease infinite;
+
+}
+
+@keyframes skeleton {
+
+0% { background-position: 100% 50% }
+100% { background-position: 0 50% }
 
 }
 
@@ -245,33 +331,41 @@ onBeforeUnmount(() => {
 
 .modal {
 
-  position: fixed;
+position: fixed;
 
-  inset: 0;
+inset: 0;
 
-  background: rgba(0,0,0,.9);
+background: rgba(0,0,0,0.92);
 
-  display: flex;
+display: flex;
 
-  align-items: center;
+align-items: center;
 
-  justify-content: center;
+justify-content: center;
 
-  z-index: 2000;
+z-index: 2000;
 
-  backdrop-filter: blur(8px);
+backdrop-filter: blur(8px);
 
 }
 
 .modal-image {
 
-  max-width: 92%;
+max-width: 95%;
 
-  max-height: 92%;
+max-height: 95%;
 
-  border-radius: 12px;
+border-radius: 12px;
 
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+
+}
+
+/* SENTINEL */
+
+.sentinel {
+
+height: 1px;
 
 }
 

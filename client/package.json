@@ -12,9 +12,11 @@
     "axios": "^1.13.6",
     "cloudinary": "^2.9.0",
     "pinia": "^3.0.4",
+    "swiper": "^12.1.2",
     "vee-validate": "^4.15.1",
     "vue": "^3.5.25",
     "vue-router": "^5.0.3",
+    "vue-virtual-scroller": "^2.0.0-beta.9",
     "zod": "^4.3.6"
   },
   "devDependencies": {
