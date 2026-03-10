@@ -4,13 +4,21 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import express from 'express';
+import { Request, Response } from 'express';
+import { NextFunction } from 'express';
+import { join } from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bodyParser: false,
   });
   const logger = new Logger('Bootstrap');
-  //app.set('trust proxy', 1);
+  app.set('trust proxy', 1);
+  app.enableCors({
+    origin: process.env.CLIENT_URL || true,
+    credentials: true,
+  });
+  /*
   app.enableCors({
     origin: [
       'http://localhost:5173',
@@ -23,10 +31,11 @@ async function bootstrap() {
       'https://taktiddev.vercel.app',
     ],
     credentials: true,
-  });
+  });*/
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   app.use(cookieParser());
   app.use(express.json());
+  app.setGlobalPrefix('api');
   /*
   const config = new DocumentBuilder()
     .setTitle('TakTid API')
@@ -40,7 +49,18 @@ async function bootstrap() {
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api-docs', app, document);
-*/
+
+  if (process.env.NODE_ENV !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('Lutsian API')
+      .setDescription('Projects photo getter')
+      .setVersion('1.0.0')
+      .addBearerAuth()
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup('api-docs', app, document);
+  }*/
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -48,9 +68,21 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useStaticAssets(join(__dirname, '..', 'public'));
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.method === 'GET' && !req.url.startsWith('/api')) {
+      res.sendFile(join(__dirname, '..', 'public', 'index.html'));
+    } else {
+      next();
+    }
+  });
   const port = process.env.PORT ? Number(process.env.PORT) : 8080;
   await app.listen(port, '0.0.0.0');
+  //await app.listen(port);
+  logger.log('Serving static files from:', join(process.cwd(), 'public'));
   logger.log(`
     Application is running on: http://localhost:${process.env.PORT ?? 8080}`);
+  //logger.log(`
+  //  📚 Swagger: http://localhost:${process.env.PORT ?? 8080}/api-docs`);
 }
 void bootstrap();

@@ -3,7 +3,7 @@ import { useAuthStore } from '../stores/auth.store';
 import { refresh } from './auth.api';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   withCredentials: true,
 });
 

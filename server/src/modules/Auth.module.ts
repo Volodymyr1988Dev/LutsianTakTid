@@ -5,6 +5,7 @@ import { AuthService } from '../services/Auth.service';
 import { AuthController } from '../controllers/Auth.controller';
 import { UserModule } from './User.module';
 import { SessionModule } from './Session.module';
+import { AuthGuard } from '../types/guard';
 
 @Module({
   imports: [
@@ -31,8 +32,8 @@ import { SessionModule } from './Session.module';
       },
     }),
   ],
-  providers: [AuthService],
+  providers: [AuthService, AuthGuard],
   controllers: [AuthController],
-  exports: [AuthService],
+  exports: [AuthService, AuthGuard],
 })
 export class AuthModule {}
