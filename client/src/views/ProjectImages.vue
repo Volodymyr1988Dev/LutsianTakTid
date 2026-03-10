@@ -1,118 +1,205 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+
+import { ref,onMounted,onBeforeUnmount,nextTick } from 'vue'
+import { useRoute,useRouter } from 'vue-router'
 import { useProjectImageStore } from '../stores/projectImages.store'
+
+/* SWIPER */
+import { Swiper,SwiperSlide } from 'swiper/vue'
+import 'swiper/css'
 
 const route = useRoute()
 const router = useRouter()
-const imageStore = useProjectImageStore()
+
+const store = useProjectImageStore()
 
 const projectId = route.params.id as string
 
 const sentinel = ref<HTMLElement | null>(null)
-const selectedImage = ref<string | null>(null)
 
+const selectedIndex = ref<number | null>(null)
+
+/* observer instance */
 let observer: IntersectionObserver | null = null
 
-async function loadMore() {
 
-  if (imageStore.loading) return
+/* ---------- LOAD MORE ---------- */
 
-  await imageStore.loadPaginated(
-    projectId,
-    Math.floor(imageStore.images.length / 12) + 1,
-    12
-  )
+async function loadMore(){
+
+  /* FIX infinite loop */
+
+  if(store.loading) return
+
+  if(store.hasMore === false) return
+
+  await store.loadNext(projectId)
 
 }
 
-function openImage(url: string) {
-  selectedImage.value = url
+
+/* ---------- IMAGE MODAL ---------- */
+
+function openImage(index:number){
+
+  selectedIndex.value = index
+
+  /* PRELOAD next images for smooth swipe */
+
+  const next1 = store.images[index + 1]
+  const next2 = store.images[index + 2]
+
+  if(next1){
+    const img = new Image()
+    img.src = next1.url
+  }
+
+  if(next2){
+    const img = new Image()
+    img.src = next2.url
+  }
+
 }
 
-function closeModal() {
-  selectedImage.value = null
+function closeModal(){
+
+  selectedIndex.value = null
+
 }
 
-function goBack() {
+
+/* ---------- NAVIGATION ---------- */
+
+function goBack(){
+
   router.push('/projects')
+
 }
 
-onMounted(async () => {
+
+/* ---------- LIFECYCLE ---------- */
+
+onMounted(async()=>{
 
   await loadMore()
+
   await nextTick()
 
-  observer = new IntersectionObserver(entries => {
+  observer = new IntersectionObserver(
 
-    if (entries[0]?.isIntersecting) {
-      loadMore()
+    (entries)=>{
+
+      const entry = entries[0]
+
+      if(!entry) return
+
+      if(entry.isIntersecting){
+
+        loadMore()
+
+      }
+
+    },
+
+    {
+
+      rootMargin:"300px"
+
     }
 
-  })
+  )
 
-  if (sentinel.value) {
+  if(sentinel.value){
+
     observer.observe(sentinel.value)
+
   }
 
 })
 
-onBeforeUnmount(() => {
+
+onBeforeUnmount(()=>{
+
   observer?.disconnect()
+
 })
+
 </script>
+
 
 <template>
 
 <div class="page">
 
-<button class="back-button" @click="goBack">
-
-<span class="arrow">←</span>
-Back
-
+<button
+class="back"
+@click="goBack"
+>
+← Back
 </button>
 
-<h1 class="title">Project Images</h1>
+<h1 class="title">
+Project Images
+</h1>
+
+
+<!-- IMAGE GRID -->
 
 <div class="masonry">
 
 <div
-v-for="img in imageStore.images"
+v-for="(img,index) in store.images"
 :key="img.id"
 class="card"
-@click="openImage(img.url)"
+@click="openImage(index)"
 >
 
 <img
 :src="img.url"
 loading="lazy"
+decoding="async"
 class="image"
 />
 
 </div>
 
-<div
-v-if="imageStore.loading"
-v-for="i in 8"
-:key="'skeleton'+i"
-class="skeleton"
-/>
-
 </div>
 
-<div ref="sentinel" class="sentinel"></div>
 
 <div
-v-if="selectedImage"
+ref="sentinel"
+class="sentinel"
+/>
+
+
+<!-- MODAL GALLERY -->
+
+<div
+v-if="selectedIndex !== null"
 class="modal"
-@click="closeModal"
+@click.self="closeModal"
+>
+
+<Swiper
+:initial-slide="selectedIndex"
+space-between="20"
+:slides-per-view="1"
+class="swiper"
+>
+
+<SwiperSlide
+v-for="img in store.images"
+:key="img.id"
 >
 
 <img
-:src="selectedImage"
+:src="img.url"
 class="modal-image"
 />
+
+</SwiperSlide>
+
+</Swiper>
 
 </div>
 
@@ -120,252 +207,219 @@ class="modal-image"
 
 </template>
 
+
+
 <style scoped>
 
 /* PAGE */
 
-.page {
+.page{
 
-min-height: 100vh;
+min-height:100vh;
 
-background: #0e0e0e;
+padding:30px;
 
-color: white;
+background:var(--bg);
 
-display: flex;
+color:var(--text);
 
-flex-direction: column;
+display:flex;
 
-align-items: center;
+flex-direction:column;
 
-padding: 30px;
+align-items:center;
 
 }
+
 
 /* TITLE */
 
-.title {
+.title{
 
-font-size: 28px;
+font-size:28px;
 
-font-weight: 700;
+font-weight:700;
 
-margin-bottom: 24px;
-
-text-align: center;
+margin-bottom:28px;
 
 }
+
 
 /* BACK BUTTON */
 
-.back-button {
+.back{
 
-position: fixed;
+position:fixed;
 
-top: 20px;
+top:20px;
+left:20px;
 
-left: 20px;
+padding:10px 16px;
 
-display: flex;
+border-radius:12px;
 
-align-items: center;
+border:none;
 
-gap: 8px;
+cursor:pointer;
 
-background: rgba(255,255,255,0.1);
+background:var(--card);
 
-color: white;
+box-shadow:0 6px 20px var(--shadow);
 
-border: none;
+font-weight:600;
 
-padding: 10px 16px;
-
-border-radius: 12px;
-
-cursor: pointer;
-
-font-size: 14px;
-
-backdrop-filter: blur(10px);
-
-transition: all .2s;
-
-z-index: 1000;
+transition:all .2s;
 
 }
 
-.back-button:hover {
+.back:hover{
 
-background: rgba(255,255,255,0.2);
-
-transform: translateY(-2px);
+transform:translateY(-2px);
 
 }
 
-.arrow {
 
-font-size: 18px;
+/* MASONRY GRID */
 
-}
+.masonry{
 
-/* MASONRY */
+max-width:1300px;
 
-.masonry {
+width:100%;
 
-max-width: 1300px;
+column-count:4;
 
-width: 100%;
-
-column-count: 4;
-
-column-gap: 16px;
+column-gap:16px;
 
 }
 
-@media (max-width: 1200px) {
 
-.masonry {
-column-count: 3;
+@media(max-width:1100px){
+
+.masonry{
+column-count:3;
 }
 
 }
 
-@media (max-width: 800px) {
 
-.masonry {
-column-count: 2;
+@media(max-width:700px){
+
+.masonry{
+column-count:2;
 }
 
 }
 
-@media (max-width: 500px) {
 
-.masonry {
-column-count: 1;
-}
+/* IMAGE CARD */
 
-}
+.card{
 
-/* CARD */
+break-inside:avoid;
 
-.card {
+margin-bottom:16px;
 
-break-inside: avoid;
+border-radius:14px;
 
-margin-bottom: 16px;
+overflow:hidden;
 
-border-radius: 14px;
+cursor:pointer;
 
-overflow: hidden;
+box-shadow:0 6px 18px var(--shadow);
 
-cursor: zoom-in;
-
-background: #1c1c1c;
-
-box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-
-transition: transform .25s ease,
-box-shadow .25s ease;
+transition:transform .25s,
+box-shadow .25s;
 
 }
 
-.card:hover {
+.card:hover{
 
-transform: translateY(-5px);
+transform:translateY(-5px);
 
-box-shadow: 0 12px 30px rgba(0,0,0,0.8);
+box-shadow:0 16px 40px var(--shadow);
 
 }
+
 
 /* IMAGE */
 
-.image {
+.image{
 
-width: 100%;
+width:100%;
 
-display: block;
+display:block;
 
-object-fit: cover;
+object-fit:cover;
 
-transition: transform .35s ease;
-
-}
-
-.card:hover .image {
-
-transform: scale(1.05);
+transition:transform .35s ease;
 
 }
 
-/* SKELETON */
+.card:hover .image{
 
-.skeleton {
-
-height: 220px;
-
-border-radius: 14px;
-
-margin-bottom: 16px;
-
-background: linear-gradient(
-90deg,
-#1c1c1c 25%,
-#2a2a2a 37%,
-#1c1c1c 63%
-);
-
-background-size: 400% 100%;
-
-animation: skeleton 1.4s ease infinite;
+transform:scale(1.05);
 
 }
 
-@keyframes skeleton {
-
-0% { background-position: 100% 50% }
-100% { background-position: 0 50% }
-
-}
 
 /* MODAL */
 
-.modal {
+.modal{
 
-position: fixed;
+position:fixed;
 
-inset: 0;
+inset:0;
 
-background: rgba(0,0,0,0.92);
+background:rgba(0,0,0,.92);
 
-display: flex;
+display:flex;
 
-align-items: center;
+align-items:center;
 
-justify-content: center;
+justify-content:center;
 
-z-index: 2000;
-
-backdrop-filter: blur(8px);
+z-index:2000;
 
 }
 
-.modal-image {
 
-max-width: 95%;
+/* MODAL IMAGE */
 
-max-height: 95%;
+.modal-image{
 
-border-radius: 12px;
+max-width:95%;
 
-box-shadow: 0 20px 60px rgba(0,0,0,0.9);
+max-height:95%;
+
+border-radius:14px;
+
+box-shadow:0 20px 60px rgba(0,0,0,.9);
 
 }
+
+
+/* SWIPER */
+
+.swiper{
+
+width:100%;
+height:100%;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+}
+
 
 /* SENTINEL */
 
-.sentinel {
+.sentinel{
 
-height: 1px;
+height:1px;
 
 }
 

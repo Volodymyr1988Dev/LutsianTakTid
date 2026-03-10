@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getProjectImages, getProjectImagesPaginated } from '../api/projectImages.api'
+import { /*getProjectImages,*/ getProjectImagesPaginated } from '../api/projectImages.api'
 import type { ProjectImage } from '../types/projectImages.type'
 
 export const useProjectImageStore = defineStore('projectImages', () => {
@@ -8,9 +8,10 @@ export const useProjectImageStore = defineStore('projectImages', () => {
   const loading = ref(false)
   const cache = new Map<string, ProjectImage[]>()
   const hasMore = ref(true)
-  const pages = ref(1)
+  const page = ref(1)
 
-  async function load(projectId: string) {
+  async function loadNext(projectId: string) {
+    /*
     loading.value = true
     try {
       const { data } = await getProjectImages(projectId)
@@ -18,7 +19,47 @@ export const useProjectImageStore = defineStore('projectImages', () => {
     } finally {
       loading.value = false
     }
-  }
+  }*/
+ if(loading.value || !hasMore.value) return
+
+loading.value = true
+
+try{
+
+const {data} = await getProjectImagesPaginated(
+projectId,
+page.value,
+12
+)
+
+images.value.push(...data.data)
+
+/* FIX pagination */
+
+if(page.value >= data.lastPage){
+
+hasMore.value = false
+
+}
+
+page.value++
+
+}
+finally{
+
+loading.value = false
+
+}
+
+}
+
+function reset(){
+
+images.value = []
+page.value = 1
+hasMore.value = true
+
+}
 
   async function loadPaginated(
     projectId: string,
@@ -61,7 +102,9 @@ export const useProjectImageStore = defineStore('projectImages', () => {
   return {
     images,
     loading,
-    load,
+    hasMore,
+    loadNext,
+    reset,
     loadPaginated,
   }
 })
