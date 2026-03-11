@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref,onMounted,onBeforeUnmount,nextTick } from 'vue'
+import { ref,onMounted,onBeforeUnmount,nextTick, watch } from 'vue'
 import { useRoute,useRouter } from 'vue-router'
 import { useProjectImageStore } from '../stores/projectImages.store'
 
@@ -13,7 +13,7 @@ const router = useRouter()
 
 const store = useProjectImageStore()
 
-const projectId = route.params.id as string
+const projectId = ref(route.params.id as string)
 
 const sentinel = ref<HTMLElement | null>(null)
 
@@ -31,9 +31,9 @@ async function loadMore(){
 
   if(store.loading) return
 
-  if(store.hasMore === false) return
-
-  await store.loadNext(projectId)
+  //if(store.hasMore === false) return
+  if (!store.hasMore) return
+  await store.loadNext(projectId.value)
 
 }
 
@@ -76,6 +76,20 @@ function goBack(){
 
 }
 
+watch(
+  () => route.params.id,
+  async (newId) => {
+
+    if (!newId) return
+
+    projectId.value = newId as string
+
+    store.reset()
+
+    await loadMore()
+
+  }
+)
 
 /* ---------- LIFECYCLE ---------- */
 

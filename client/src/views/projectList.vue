@@ -19,7 +19,8 @@ async function logout(){
 
   await auth.logout()
 
-  router.push('/login')
+  //router.push('/login')
+  router.replace('/login')
 
 }
 function openProject(id:string){
