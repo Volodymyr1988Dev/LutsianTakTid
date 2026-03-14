@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import RegisterView from '../views/RegisterView.vue'
 import ProjectList from '../views/projectList.vue'
-import ProjectImages from '../views/ProjectImages.vue'
+//import ProjectImages from '../views/ProjectImages.vue'
 import { useAuthStore } from '../stores/auth.store'
 
 export const router = createRouter({
@@ -33,7 +33,8 @@ export const router = createRouter({
 
     {
       path: '/projects/:id',
-      component: ProjectImages,
+      //component: ProjectImages,
+      component: () => import('../views/ProjectImages.vue'),
       meta: { requiresAuth: true }
     }
 

@@ -18,7 +18,7 @@ font-family: system-ui, Arial;
 
 }
 
-body {
+html,body {
 
 margin:0;
 background: var(--bg);

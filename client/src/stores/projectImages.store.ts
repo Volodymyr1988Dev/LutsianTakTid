@@ -1,110 +1,56 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { /*getProjectImages,*/ getProjectImagesPaginated } from '../api/projectImages.api'
+import { getProjectImagesPaginated } from '../api/projectImages.api'
 import type { ProjectImage } from '../types/projectImages.type'
 
 export const useProjectImageStore = defineStore('projectImages', () => {
   const images = ref<ProjectImage[]>([])
   const loading = ref(false)
-  const cache = new Map<string, ProjectImage[]>()
-  const hasMore = ref(true)
   const page = ref(1)
-
-  async function loadNext(projectId: string) {
-    /*
-    loading.value = true
-    try {
-      const { data } = await getProjectImages(projectId)
-      images.value = data
-    } finally {
-      loading.value = false
+  const hasMore = ref(true)
+  const currentProjectId = ref<string | null>(null)
+  async function fetchNext(projectId: string) {
+     if (currentProjectId.value !== projectId) {
+      images.value = []
+      page.value = 1
+      hasMore.value = true
+      currentProjectId.value = projectId
     }
-  }*/
- if(loading.value || !hasMore.value) return
-
-loading.value = true
-
-try{
-
-const {data} = await getProjectImagesPaginated(
-projectId,
-page.value,
-12
-)
-
-images.value.push(...data.data)
-
-/* FIX pagination */
-
-if(page.value >= data.lastPage){
-
-hasMore.value = false
-
-}
-
-page.value++
-
-}
-finally{
-
-loading.value = false
-
-}
-
-}
-
-function reset(){
-
-images.value = []
-page.value = 1
-hasMore.value = true
-
-}
-
-  async function loadPaginated(
-    projectId: string,
-    page: number,
-    limit: number,
-  ) {
-    const cacheKey = projectId
-
-    if (page === 1 && cache.has(cacheKey)) {
-
-      images.value = cache.get(cacheKey)!
-      return {
-        page: 1,
-        lastPage: 1,
-        data: images.value
-      }
-
-    }
-
+    if (loading.value || !hasMore.value) return
     loading.value = true
     try {
       const { data } = await getProjectImagesPaginated(
         projectId,
-        page,
-        limit,
+        page.value,
+        12
       )
+      images.value.push(...data.data)
 
-      if (page === 1) {
-        images.value = data.data
-      } else {
-        images.value.push(...data.data)
+      if (page.value >= data.lastPage) {
+        hasMore.value = false
       }
-
-      return data
+      page.value++
     } finally {
       loading.value = false
     }
+
+  }
+
+  function reset() {
+
+    images.value = []
+    page.value = 1
+    hasMore.value = true
+    currentProjectId.value = null
   }
 
   return {
     images,
     loading,
+    page,
     hasMore,
-    loadNext,
-    reset,
-    loadPaginated,
+    fetchNext,
+    reset
   }
+
 })

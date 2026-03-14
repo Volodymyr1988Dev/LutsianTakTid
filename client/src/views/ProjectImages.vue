@@ -1,11 +1,10 @@
 <script setup lang="ts">
 
-import { ref,onMounted,onBeforeUnmount,nextTick, watch } from 'vue'
-import { useRoute,useRouter } from 'vue-router'
+import { ref, onMounted, onBeforeUnmount, nextTick, watch/*, computed*/ } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useProjectImageStore } from '../stores/projectImages.store'
 
-/* SWIPER */
-import { Swiper,SwiperSlide } from 'swiper/vue'
+import { Swiper, SwiperSlide } from 'swiper/vue'
 import 'swiper/css'
 
 const route = useRoute()
@@ -14,136 +13,172 @@ const router = useRouter()
 const store = useProjectImageStore()
 
 const projectId = ref(route.params.id as string)
-
+const loadedImages = ref<Set<string>>(new Set())
 const sentinel = ref<HTMLElement | null>(null)
+let observer: IntersectionObserver | null = null
 
 const selectedIndex = ref<number | null>(null)
 
-/* observer instance */
-let observer: IntersectionObserver | null = null
+const touchStartY = ref(0)
+const touchEndY = ref(0)
 
-
+//const scrollY = ref(0)
+//const viewportHeight = ref(window.innerHeight)
 /* ---------- LOAD MORE ---------- */
+/*
+function handleScroll(){
+
+  scrollY.value = window.scrollY
+
+}*/
+function onImageLoad(id: string) {
+  loadedImages.value.add(id)
+}
+let loadingLock = false
 
 async function loadMore(){
 
-  /* FIX infinite loop */
+if(loadingLock) return
 
-  if(store.loading) return
+loadingLock = true
 
-  //if(store.hasMore === false) return
-  if (!store.hasMore) return
-  await store.loadNext(projectId.value)
+await store.fetchNext(projectId.value)
 
-}
-
-
-/* ---------- IMAGE MODAL ---------- */
-
-function openImage(index:number){
-
-  selectedIndex.value = index
-
-  /* PRELOAD next images for smooth swipe */
-
-  const next1 = store.images[index + 1]
-  const next2 = store.images[index + 2]
-
-  if(next1){
-    const img = new Image()
-    img.src = next1.url
-  }
-
-  if(next2){
-    const img = new Image()
-    img.src = next2.url
-  }
+loadingLock = false
 
 }
 
-function closeModal(){
+/* ---------- OBSERVER ---------- */
 
-  selectedIndex.value = null
-
-}
-
-
-/* ---------- NAVIGATION ---------- */
-
-function goBack(){
-
-  router.push('/projects')
-
-}
-
-watch(
-  () => route.params.id,
-  async (newId) => {
-
-    if (!newId) return
-
-    projectId.value = newId as string
-
-    store.reset()
-
-    await loadMore()
-
-  }
-)
-
-/* ---------- LIFECYCLE ---------- */
-
-onMounted(async()=>{
-
-  await loadMore()
-
-  await nextTick()
+function createObserver() {
 
   observer = new IntersectionObserver(
 
-    (entries)=>{
+    (entries) => {
 
-      const entry = entries[0]
+      if (!entries[0] || !entries[0].isIntersecting) return
 
-      if(!entry) return
+      if (store.loading) return
 
-      if(entry.isIntersecting){
-
-        loadMore()
-
-      }
+      loadMore()
 
     },
 
     {
-
-      rootMargin:"300px"
-
+      rootMargin: '600px'
     }
 
   )
 
-  if(sentinel.value){
-
+  if (sentinel.value) {
     observer.observe(sentinel.value)
+  }
+
+}
+
+/* ---------- PROJECT CHANGE ---------- */
+
+watch(
+
+  () => route.params.id,
+
+  async (newId) => {
+
+    //if (!newId) return
+    if (!newId || newId === projectId.value) return
+    projectId.value = newId as string
+
+    /* RESET STORE */
+
+    //store.reset()
+
+    observer?.disconnect()
+
+    await loadMore()
+
+    await nextTick()
+
+    createObserver()
 
   }
 
+)
+
+/* ---------- LIFECYCLE ---------- */
+
+onMounted(async () => {
+
+  //window.addEventListener('scroll', handleScroll)
+  await loadMore()
+
+  await nextTick()
+
+  createObserver()
+
 })
 
-
-onBeforeUnmount(()=>{
+onBeforeUnmount(() => {
 
   observer?.disconnect()
-
+  //window.removeEventListener('scroll', handleScroll)
 })
+/*
+const visibleImages = computed(()=>{
+
+  const start = Math.floor(scrollY.value / 300) * 4
+  const end = start + 40
+
+  return store.images.slice(start,end)
+
+})*/
+/* ---------- MODAL ---------- */
+
+function openImage(index: number) {
+
+  selectedIndex.value = index
+  document.body.style.overflow = 'hidden'
+
+}
+
+function closeModal() {
+
+  selectedIndex.value = null
+  document.body.style.overflow = ''
+
+}
+
+/* ---------- TOUCH CLOSE ---------- */
+
+function touchStart(e: TouchEvent) {
+  if (!e.touches[0]) return
+  touchStartY.value = e.touches[0].clientY
+
+}
+
+function touchMove(e: TouchEvent) {
+  if (!e.touches[0]) return
+  touchEndY.value = e.touches[0].clientY
+
+  if (touchEndY.value - touchStartY.value > 120) {
+    closeModal()
+  }
+
+}
+
+/* ---------- NAVIGATION ---------- */
+
+function goBack() {
+
+  router.push('/projects')
+
+}
 
 </script>
 
 
 <template>
 
-<div class="page">
+<div class="page" :key="projectId">
 
 <button
 class="back"
@@ -162,19 +197,24 @@ Project Images
 <div class="masonry">
 
 <div
-v-for="(img,index) in store.images"
-:key="img.id"
+v-for="(img,index) in store.images /*visibleImages store.images*/"
+:key="img.id/* + projectId*/"
 class="card"
 @click="openImage(index)"
 >
-
 <img
 :src="img.url"
 loading="lazy"
 decoding="async"
-class="image"
+:class="['image', { loaded: loadedImages.has(img.id) }]"
+fetchpriority="low"
+@load="onImageLoad(img.id)"
 />
-
+<div
+v-if="!loadedImages.has(img.id)"
+class="skeleton"
+/>
+<!--skeleton card loading-->
 </div>
 
 </div>
@@ -192,6 +232,8 @@ class="sentinel"
 v-if="selectedIndex !== null"
 class="modal"
 @click.self="closeModal"
+@touchstart="touchStart"
+@touchmove="touchMove"
 >
 
 <Swiper
@@ -284,6 +326,7 @@ font-weight:600;
 
 transition:all .2s;
 
+z-index: 3000;
 }
 
 .back:hover{
@@ -328,7 +371,7 @@ column-count:2;
 
 /* IMAGE CARD */
 
-.card{
+.card{ position:relative;
 
 break-inside:avoid;
 
@@ -343,7 +386,7 @@ cursor:pointer;
 box-shadow:0 6px 18px var(--shadow);
 
 transition:transform .25s,
-box-shadow .25s;
+/*box-shadow .25s;*/
 
 }
 
@@ -354,7 +397,43 @@ transform:translateY(-5px);
 box-shadow:0 16px 40px var(--shadow);
 
 }
+/*
+.card.loading {
+height:250px;
+background:linear-gradient(
+90deg,
+#1a1a1a 25%,
+#2a2a2a 37%,
+#1a1a1a 63%
+);
+background-size:400% 100%;
+animation:skeleton 1.4s infinite;
+}*/
+.skeleton{
+position:absolute;
+inset:0;
 
+min-height:220px;
+
+background:linear-gradient(
+90deg,
+var(--skeleton-1) 25%,
+var(--skeleton-2) 37%,
+var(--skeleton-1) 63%
+/*
+#1a1a1a 25%,
+#2a2a2a 37%,
+#1a1a1a 63%*/
+);
+
+background-size:400% 100%;
+animation:skeleton 1.4s infinite;
+}
+
+@keyframes skeleton{
+0%{background-position:-200px 0}
+100%{background-position:200px 0}
+}
 
 /* IMAGE */
 
@@ -366,10 +445,13 @@ display:block;
 
 object-fit:cover;
 
-transition:transform .35s ease;
-
+/*transition:transform .35s ease;*/
+transition:opacity .4s ease, transform .35s ease;
+opacity:0;
 }
-
+.image.loaded{
+opacity:1;
+}
 .card:hover .image{
 
 transform:scale(1.05);
@@ -402,9 +484,11 @@ z-index:2000;
 
 .modal-image{
 
-max-width:95%;
+width:100vw;
 
-max-height:95%;
+height:100vh;
+
+object-fit: contain;
 
 border-radius:14px;
 
@@ -417,8 +501,8 @@ box-shadow:0 20px 60px rgba(0,0,0,.9);
 
 .swiper{
 
-width:100%;
-height:100%;
+width:100vw;
+height:100vh;
 
 display:flex;
 
