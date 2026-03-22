@@ -2,7 +2,7 @@ import { defineStore } from "pinia"
 import { ref } from "vue"
 import { getProjectImagesPaginated } from "../api/projectImages.api"
 import type { ProjectImage } from "../types/projectImages.type"
-import { cloudinary } from "../utils/cloudinary"
+//import { cloudinary } from "../utils/cloudinary"
 
 export const useProjectImageStore = defineStore("projectImages", () => {
 
@@ -37,7 +37,7 @@ export const useProjectImageStore = defineStore("projectImages", () => {
       console.log('API', data)
       //images.value.push(...data.data)
       //images.value.push(images.value, ...data.data)
-      data.data.forEach(img => preloadImage(cloudinary(img.url, 800)))
+      //data.data.forEach(img => preloadImage(cloudinary(img.url, 800)))
       images.value = [...images.value, ...data.data]
       //images.value.push(...data.data)
       if (page.value >= data.lastPage) {
@@ -53,12 +53,12 @@ export const useProjectImageStore = defineStore("projectImages", () => {
     }
 
   }
-
+/*
   const preloadImage = (url: string) => {
     const img = new Image()
     img.src = url
   }
-
+*/
   function reset() {
 
     images.value = []

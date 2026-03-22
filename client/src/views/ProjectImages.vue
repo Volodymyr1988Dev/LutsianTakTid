@@ -55,7 +55,7 @@ function createObserver() {
     },
 
     {
-      rootMargin: "1000px"
+      rootMargin: "400px"
     }
 
   )
@@ -94,7 +94,7 @@ watch(
 onBeforeUnmount(() => {
 
   observer?.disconnect()
-
+  document.body.style.overflow = ""
 })
 
 function openImage(index: number) {
@@ -107,7 +107,9 @@ function openImage(index: number) {
 function closeModal() {
 
   selectedIndex.value = null
-  document.body.style.overflow = ""
+  requestAnimationFrame(() => {
+    document.body.style.overflow = ""
+  })
 
 }
 
@@ -467,5 +469,10 @@ column-gap:16px;
 .card{
 break-inside:avoid;
 margin-bottom:16px;
+}
+@media (max-width: 768px) {
+  .grid {
+    padding: 0 8px;
+  }
 }
 </style>
