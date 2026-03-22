@@ -1,39 +1,62 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { getProjectImagesPaginated } from '../api/projectImages.api'
-import type { ProjectImage } from '../types/projectImages.type'
+import { defineStore } from "pinia"
+import { ref } from "vue"
+import { getProjectImagesPaginated } from "../api/projectImages.api"
+import type { ProjectImage } from "../types/projectImages.type"
+import { cloudinary } from "../utils/cloudinary"
 
-export const useProjectImageStore = defineStore('projectImages', () => {
+export const useProjectImageStore = defineStore("projectImages", () => {
+
   const images = ref<ProjectImage[]>([])
   const loading = ref(false)
   const page = ref(1)
   const hasMore = ref(true)
   const currentProjectId = ref<string | null>(null)
+
   async function fetchNext(projectId: string) {
-     if (currentProjectId.value !== projectId) {
+
+    if (currentProjectId.value !== projectId) {
+
       images.value = []
       page.value = 1
       hasMore.value = true
       currentProjectId.value = projectId
+
     }
+
     if (loading.value || !hasMore.value) return
+
     loading.value = true
+
     try {
+
       const { data } = await getProjectImagesPaginated(
         projectId,
         page.value,
-        12
+        24
       )
-      images.value.push(...data.data)
-
+      console.log('API', data)
+      //images.value.push(...data.data)
+      //images.value.push(images.value, ...data.data)
+      data.data.forEach(img => preloadImage(cloudinary(img.url, 800)))
+      images.value = [...images.value, ...data.data]
+      //images.value.push(...data.data)
       if (page.value >= data.lastPage) {
         hasMore.value = false
       }
+
       page.value++
+
     } finally {
+
       loading.value = false
+
     }
 
+  }
+
+  const preloadImage = (url: string) => {
+    const img = new Image()
+    img.src = url
   }
 
   function reset() {
@@ -42,6 +65,7 @@ export const useProjectImageStore = defineStore('projectImages', () => {
     page.value = 1
     hasMore.value = true
     currentProjectId.value = null
+
   }
 
   return {

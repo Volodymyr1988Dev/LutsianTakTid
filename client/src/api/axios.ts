@@ -9,7 +9,32 @@ const api = axios.create({
 
 let isRefreshing = false
 let refreshPromise: Promise<void> | null = null
+const NO_CACHE_ENDPOINTS = [
+  '/project-images',
+]
 
+api.interceptors.request.use((config) => {
+  const url = config.url || ''
+
+  const shouldDisableCache =
+    config.method === 'get' &&
+    NO_CACHE_ENDPOINTS.some(endpoint => url.includes(endpoint))
+
+  if (shouldDisableCache) {
+    config.headers = config.headers || {}
+
+    config.headers['Cache-Control'] = 'no-cache'
+    config.headers['Pragma'] = 'no-cache'
+    config.headers['If-None-Match'] = ''
+
+    config.params = {
+      ...(config.params || {}),
+      _t: Date.now(),
+    }
+  }
+
+  return config
+})
 api.interceptors.response.use(
   response => response,
   async (error: AxiosError) => {

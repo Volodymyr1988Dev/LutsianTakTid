@@ -1,19 +1,22 @@
 <script setup lang="ts">
 
-import { ref, onMounted, onBeforeUnmount, nextTick, watch/*, computed*/ } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useProjectImageStore } from '../stores/projectImages.store'
+import { ref, watch, nextTick, onBeforeUnmount } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { useProjectImageStore } from "../stores/projectImages.store"
+import PinterestGrid from "../components/PinterestGrid.vue"
 
-import { Swiper, SwiperSlide } from 'swiper/vue'
-import 'swiper/css'
+import { Swiper, SwiperSlide } from "swiper/vue"
+import "swiper/css"
+
+import { cloudinary } from "../utils/cloudinary"
 
 const route = useRoute()
 const router = useRouter()
 
 const store = useProjectImageStore()
 
-const projectId = ref(route.params.id as string)
-const loadedImages = ref<Set<string>>(new Set())
+const projectId = ref<string>("")
+
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
 
@@ -21,51 +24,38 @@ const selectedIndex = ref<number | null>(null)
 
 const touchStartY = ref(0)
 const touchEndY = ref(0)
-
-//const scrollY = ref(0)
-//const viewportHeight = ref(window.innerHeight)
-/* ---------- LOAD MORE ---------- */
-/*
-function handleScroll(){
-
-  scrollY.value = window.scrollY
-
-}*/
-function onImageLoad(id: string) {
-  loadedImages.value.add(id)
-}
 let loadingLock = false
 
-async function loadMore(){
+async function loadMore() {
 
-if(loadingLock) return
-
-loadingLock = true
-
-await store.fetchNext(projectId.value)
-
-loadingLock = false
-
+  if (loadingLock || store.loading || !store.hasMore) return
+  loadingLock = true
+  try {
+    await store.fetchNext(projectId.value)
+  } finally {
+    setTimeout(() => {
+      loadingLock = false
+    }, 200)
+  }
 }
 
-/* ---------- OBSERVER ---------- */
-
 function createObserver() {
+
+  observer?.disconnect()
 
   observer = new IntersectionObserver(
 
     (entries) => {
 
-      if (!entries[0] || !entries[0].isIntersecting) return
-
-      if (store.loading) return
-
-      loadMore()
+      if (entries[0]?.isIntersecting) {
+        console.log("LOAD MORE TRIGGERED")
+        loadMore()
+      }
 
     },
 
     {
-      rootMargin: '600px'
+      rootMargin: "1000px"
     }
 
   )
@@ -76,7 +66,6 @@ function createObserver() {
 
 }
 
-/* ---------- PROJECT CHANGE ---------- */
 
 watch(
 
@@ -84,15 +73,11 @@ watch(
 
   async (newId) => {
 
-    //if (!newId) return
-    if (!newId || newId === projectId.value) return
+    if (!newId) return
+
     projectId.value = newId as string
 
-    /* RESET STORE */
-
-    //store.reset()
-
-    observer?.disconnect()
+    store.reset()
 
     await loadMore()
 
@@ -100,63 +85,43 @@ watch(
 
     createObserver()
 
-  }
+  },
+
+  { immediate: true }
 
 )
-
-/* ---------- LIFECYCLE ---------- */
-
-onMounted(async () => {
-
-  //window.addEventListener('scroll', handleScroll)
-  await loadMore()
-
-  await nextTick()
-
-  createObserver()
-
-})
 
 onBeforeUnmount(() => {
 
   observer?.disconnect()
-  //window.removeEventListener('scroll', handleScroll)
+
 })
-/*
-const visibleImages = computed(()=>{
-
-  const start = Math.floor(scrollY.value / 300) * 4
-  const end = start + 40
-
-  return store.images.slice(start,end)
-
-})*/
-/* ---------- MODAL ---------- */
 
 function openImage(index: number) {
 
   selectedIndex.value = index
-  document.body.style.overflow = 'hidden'
+  document.body.style.overflow = "hidden"
 
 }
 
 function closeModal() {
 
   selectedIndex.value = null
-  document.body.style.overflow = ''
+  document.body.style.overflow = ""
 
 }
 
-/* ---------- TOUCH CLOSE ---------- */
-
 function touchStart(e: TouchEvent) {
+
   if (!e.touches[0]) return
   touchStartY.value = e.touches[0].clientY
 
 }
 
 function touchMove(e: TouchEvent) {
+
   if (!e.touches[0]) return
+
   touchEndY.value = e.touches[0].clientY
 
   if (touchEndY.value - touchStartY.value > 120) {
@@ -165,20 +130,17 @@ function touchMove(e: TouchEvent) {
 
 }
 
-/* ---------- NAVIGATION ---------- */
-
 function goBack() {
 
-  router.push('/projects')
+  router.push("/projects")
 
 }
 
 </script>
 
-
 <template>
 
-<div class="page" :key="projectId">
+<div class="page">
 
 <button
 class="back"
@@ -190,43 +152,16 @@ class="back"
 <h1 class="title">
 Project Images
 </h1>
-
-
-<!-- IMAGE GRID -->
-
-<div class="masonry">
-
-<div
-v-for="(img,index) in store.images /*visibleImages store.images*/"
-:key="img.id/* + projectId*/"
-class="card"
-@click="openImage(index)"
->
-<img
-:src="img.url"
-loading="lazy"
-decoding="async"
-:class="['image', { loaded: loadedImages.has(img.id) }]"
-fetchpriority="low"
-@load="onImageLoad(img.id)"
+<!--:key="projectId"-->
+<PinterestGrid
+:images="store.images"
+@open="openImage"
 />
-<div
-v-if="!loadedImages.has(img.id)"
-class="skeleton"
-/>
-<!--skeleton card loading-->
-</div>
-
-</div>
-
 
 <div
 ref="sentinel"
 class="sentinel"
 />
-
-
-<!-- MODAL GALLERY -->
 
 <div
 v-if="selectedIndex !== null"
@@ -247,9 +182,11 @@ class="swiper"
 v-for="img in store.images"
 :key="img.id"
 >
-
+<!--:src="slotProps.itemInfo.data.url"-->
 <img
-:src="img.url"
+:src="cloudinary(img.url,1200)"
+decoding="async"
+fetchpriority="high"
 class="modal-image"
 />
 
@@ -521,4 +458,14 @@ height:1px;
 
 }
 
+
+.scroller{
+column-count:4;
+column-gap:16px;
+}
+
+.card{
+break-inside:avoid;
+margin-bottom:16px;
+}
 </style>
