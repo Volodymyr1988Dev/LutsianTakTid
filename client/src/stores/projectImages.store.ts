@@ -12,8 +12,8 @@ export const useProjectImageStore = defineStore("projectImages", () => {
   const hasMore = ref(true)
   const currentProjectId = ref<string | null>(null)
 
-  async function fetchNext(projectId: string) {
-
+  async function fetchNext(projectId: string, retry = 0) {
+    if (retry > 1) return
     if (currentProjectId.value !== projectId) {
 
       images.value = []
@@ -46,6 +46,11 @@ export const useProjectImageStore = defineStore("projectImages", () => {
 
       page.value++
 
+    } catch (e:any) {
+      if (e?.response?.status === 401) {
+        await new Promise(r => setTimeout(r, 300))
+        return fetchNext(projectId, retry + 1)
+      }
     } finally {
 
       loading.value = false

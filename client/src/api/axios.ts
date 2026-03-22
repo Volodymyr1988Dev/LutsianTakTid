@@ -54,8 +54,16 @@ api.interceptors.response.use(
     if (error.response?.status !== 401) {
       return Promise.reject(error)
     }
-    if (!authStore.isInitialized || !authStore.isAuthenticated) {
+
+    /*if (!authStore.isInitialized || !authStore.isAuthenticated) {
       return Promise.reject(error)
+    }*/
+    if (!authStore.isInitialized) {
+      try {
+        await authStore.initAuth()
+      } catch {
+        return Promise.reject(error)
+      }
     }
 
     if (originalRequest._retry) {
