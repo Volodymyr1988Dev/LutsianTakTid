@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { onMounted } from 'vue'
+import { onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useProjectStore } from '../stores/project.store'
 import { useThemeStore } from '../stores/theme.store'
@@ -28,6 +28,11 @@ function openProject(id:string){
   router.push(`/projects/${id}`)
 
 }
+const sortedProjects = computed(() => {
+  return [...projectStore.projects].sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  })
+})
 
 </script>
 
@@ -62,7 +67,7 @@ Logout
 <div class="grid">
 
 <div
-v-for="p in projectStore.projects"
+v-for="p in /*projectStore.projects*/ sortedProjects"
 :key="p.id"
 class="project-card"
 @click="openProject(p.id)"

@@ -19,5 +19,6 @@ export interface Project {
   images?: ProjectImage[]
   extraAssignments?: ExtraAssignment[]
   totalExtraHours?: number
+  createdAt: string;
 }
 
