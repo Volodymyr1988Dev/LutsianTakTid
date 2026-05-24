@@ -378,7 +378,7 @@ border-radius:20px;
 
 margin-bottom:20px;
 
-box-shadow:0 8px 24px var(--shadow);
+/*box-shadow:0 8px 24px var(--shadow);*/
 
 display:flex;
 
