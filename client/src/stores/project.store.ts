@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { Project } from '../types/Project.dto'
-import { getProjects } from '../api/project.api'
+import { getProjects, getProjectById } from '../api/project.api'
 
 export const useProjectStore = defineStore('projects', () => {
 
@@ -57,6 +57,28 @@ export const useProjectStore = defineStore('projects', () => {
 
   }
 
+   async function loadProject(id: string) {
+
+    try {
+
+      isLoading.value = true
+
+      selectedProject.value =
+        await getProjectById(id)
+
+    } catch (e) {
+
+      console.error('Failed to load project', e)
+
+    } finally {
+
+      isLoading.value = false
+
+    }
+
+  }
+
+
   function getById(id?: string) {
 
     if (!id) return undefined
@@ -70,6 +92,7 @@ export const useProjectStore = defineStore('projects', () => {
     selectedProject,
     projectId,
     projectsMap,
+    loadProject,
     load,
     getById,
     isLoaded,

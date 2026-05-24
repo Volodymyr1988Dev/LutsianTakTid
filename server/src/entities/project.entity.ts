@@ -1,6 +1,8 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { ProjectImage } from './projectImages.entity';
+import { ExternalProjectAssignment } from './external/external-project-assignment.entity';
+
 @Entity('projects')
 export class Projects {
   @ApiProperty({
@@ -30,6 +32,7 @@ export class Projects {
   })
   @Column({ type: 'timestamp', default: () => 'CURRENT_TIMESTAMP' })
   createdAt!: Date;
+  
   @OneToMany(() => ProjectImage, (img) => img.project, {
     cascade: true,
     onDelete: 'CASCADE',

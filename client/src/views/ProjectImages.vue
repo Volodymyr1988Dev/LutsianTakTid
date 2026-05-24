@@ -4,7 +4,7 @@ import { ref, watch, nextTick, onBeforeUnmount } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { useProjectImageStore } from "../stores/projectImages.store"
 import PinterestGrid from "../components/PinterestGrid.vue"
-
+import { useProjectStore } from "../stores/project.store"
 import { Swiper, SwiperSlide } from "swiper/vue"
 import "swiper/css"
 
@@ -16,6 +16,7 @@ const router = useRouter()
 const store = useProjectImageStore()
 
 const projectId = ref<string>("")
+const expandedComments = ref<Record<string, boolean>>({})
 
 const sentinel = ref<HTMLElement | null>(null)
 let observer: IntersectionObserver | null = null
@@ -26,6 +27,9 @@ const touchStartY = ref(0)
 const touchEndY = ref(0)
 let loadingLock = false
 
+const showImages = ref(false)
+const showExtraHours = ref(false)
+const projectStore = useProjectStore()
 async function loadMore() {
 
   if (loadingLock || store.loading || !store.hasMore) return
@@ -37,6 +41,10 @@ async function loadMore() {
       loadingLock = false
     }, 200)
   }
+}
+
+function toggleComment(id: string) {
+  expandedComments.value[id] = !expandedComments.value[id]
 }
 
 function createObserver() {
@@ -79,7 +87,11 @@ watch(
 
     store.reset()
 
-    await loadMore()
+    //await loadMore()
+    await Promise.all([
+      loadMore(),
+      projectStore.loadProject(projectId.value)
+    ])
 
     await nextTick()
 
@@ -151,11 +163,73 @@ class="back"
 ← Back
 </button>
 
-<h1 class="title">
-Project Images
-</h1>
-<!--:key="projectId"-->
+  <h1 class="title">
+    Project Overview
+  </h1>
+
+  <div class="extra-summary">
+
+    <h2>
+      Total Extra Time:
+      {{ projectStore.selectedProject?.totalExtraHours || 0 }} h
+    </h2>
+
+    <button
+      class="toggle-btn"
+      @click="showExtraHours = !showExtraHours"
+    >
+      {{
+        showExtraHours
+          ? 'Hide Detail Extra Time'
+          : 'Show Detail Extra Time'
+      }}
+    </button>
+
+  </div>
+
+  <div
+    v-if="showExtraHours"
+    class="extra-list"
+  >
+
+    <div
+      v-for="item in projectStore.selectedProject?.extraAssignments"
+      :key="item.id"
+      class="extra-card"
+    >
+      
+      <div class="extra-date">
+    {{ new Date(item.date).toLocaleDateString() }}
+      </div>
+
+      <div
+        class="extra-comment"
+        :class="{
+          expanded: expandedComments[item.id]
+        }"
+        @click="toggleComment(item.id)"
+      >
+        {{ item.comment || 'No comment' }}
+      </div>
+
+      <div class="extra-hours">
+        {{ item.hours }} h
+      </div>
+
+
+    </div>
+
+  </div>
+
+<button
+  class="toggle-btn"
+  @click="showImages = !showImages"
+>
+  {{ showImages ? 'Hide Images' : 'Show Images' }}
+</button>
+
 <PinterestGrid
+v-if="showImages"
 :images="store.images"
 @open="openImage"
 />
@@ -212,7 +286,8 @@ class="modal-image"
 
 min-height:100vh;
 
-padding:30px;
+/*padding:30px;*/
+padding:30px 20px 60px;
 
 background:var(--bg);
 
@@ -231,7 +306,7 @@ align-items:center;
 
 .title{
 
-font-size:28px;
+font-size:32px;
 
 font-weight:700;
 
@@ -263,7 +338,8 @@ box-shadow:0 6px 20px var(--shadow);
 
 font-weight:600;
 
-transition:all .2s;
+/*transition:all .2s;*/
+transition: .2s;
 
 z-index: 3000;
 }
@@ -289,7 +365,168 @@ column-gap:16px;
 
 }
 
+.extra-summary{
 
+width:100%;
+max-width:900px;
+
+background:var(--card);
+
+padding:24px;
+
+border-radius:20px;
+
+margin-bottom:20px;
+
+box-shadow:0 8px 24px var(--shadow);
+
+display:flex;
+
+flex-direction:column;
+
+gap:18px;
+}
+
+.extra-list{
+
+width:100%;
+max-width:900px;
+
+display:flex;
+
+flex-direction:column;
+
+gap:14px;
+
+margin-bottom:28px;
+}
+
+.extra-card{
+
+display:flex;
+
+justify-content:space-between;
+
+align-items:center;
+
+padding: 16px 20px;
+
+border-radius:18px;
+
+background:var(--card);
+
+box-shadow:0 8px 24px var(--shadow);
+
+gap: 18px;
+
+overflow:hidden;
+font-size:15px;
+
+/*flex-direction: column;*/
+transition:.25s;
+border:1px solid rgba(255,255,255,.05);
+}
+.extra-card:hover{
+
+transform:translateY(-2px);
+
+box-shadow:0 14px 34px var(--shadow);
+
+}
+.extra-date{
+font-size:13px;
+opacity:.65;
+white-space:nowrap;
+
+min-width:95px;
+font-weight:600;
+}
+
+.extra-hours{
+font-size:18px;
+
+font-weight:800;
+
+white-space:nowrap;
+opacity:.95;
+
+margin-left:auto;
+}
+
+.toggle-btn{
+
+padding:12px 18px;
+
+border:none;
+
+border-radius:12px;
+
+cursor:pointer;
+
+font-weight:600;
+
+background:var(--card);
+
+box-shadow:0 6px 20px var(--shadow);
+
+transition:.2s;
+margin-bottom:20px;
+}
+
+.toggle-btn:hover{
+transform:translateY(-2px);
+}
+
+.photos-btn{
+margin-bottom:24px;
+}
+
+.extra-card:hover{
+
+transform:translateY(-3px);
+
+box-shadow:0 18px 40px var(--shadow);
+
+}
+
+
+.extra-comment{
+flex:1;
+
+font-size:14px;
+
+line-height:1.4;
+
+overflow:hidden;
+
+white-space:nowrap;
+
+text-overflow:ellipsis;
+
+cursor:pointer;
+
+opacity:.92;
+
+transition:.2s;
+
+}
+.extra-comment:hover{
+
+opacity:1;
+
+}
+
+.extra-comment.expanded{
+
+white-space:normal;
+
+overflow:visible;
+
+text-overflow:unset;
+
+padding:6px 0;
+
+}
 @media(max-width:1100px){
 
 .masonry{
@@ -303,6 +540,36 @@ column-count:3;
 
 .masonry{
 column-count:2;
+}
+
+.extra-card{
+
+align-items:flex-start;
+
+gap:10px;
+
+padding:14px 16px;
+
+}
+
+.extra-date{
+
+min-width:auto;
+
+font-size:12px;
+
+}
+
+.extra-comment{
+
+font-size:13px;
+
+}
+
+.extra-hours{
+
+font-size:16px;
+
 }
 
 }

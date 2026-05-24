@@ -3,7 +3,8 @@ import { User } from '../entities/user.entity';
 import { Projects } from '../entities/project.entity';
 import { ProjectImage } from '../entities/projectImages.entity';
 import { Session } from '../entities/session.entity';
-
+import { ExternalUser } from '../entities/external/external-user.entity';
+import { ExternalProjectAssignment } from '../entities/external/external-project-assignment.entity';
 const useSSL = process.env.NEON_DB_URL?.includes('neon.tech') ?? false;
 
 export const mainDbConfig: DataSourceOptions = {
@@ -22,7 +23,7 @@ export const projectsDbConfig: DataSourceOptions = {
   type: 'postgres',
   url: process.env.NEON_DB_URL, // readonly_user connection
   ssl: useSSL ? { rejectUnauthorized: false } : false,
-  entities: [Projects, ProjectImage],
+  entities: [Projects, ProjectImage, ExternalUser, ExternalProjectAssignment],
   synchronize: false,
   logging: false,
 };
