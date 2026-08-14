@@ -193,13 +193,17 @@ class="back"
   >
 
     <div
-      v-for="item in projectStore.selectedProject?.extraAssignments"
+      v-for="item in projectStore.selectedProject?.extraAssignments || []"
       :key="item.id"
       class="extra-card"
     >
       
       <div class="extra-date">
     {{ new Date(item.date).toLocaleDateString() }}
+      </div>
+
+      <div class="extra-user">
+        {{ item.user?.name || 'Unknown user' }}
       </div>
 
       <div
@@ -736,6 +740,13 @@ column-gap:16px;
 .card{
 break-inside:avoid;
 margin-bottom:16px;
+}
+
+.extra-user {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 @media (max-width: 768px) {
   .grid {

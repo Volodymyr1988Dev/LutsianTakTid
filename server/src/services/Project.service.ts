@@ -18,7 +18,7 @@ export class ProjectsService {
   async findAll(): Promise<Projects[]> {
     return this.projectRepo.find({
       relations: ['images'],
-      //order: { createdAt: 'DESC' },
+      order: { createdAt: 'DESC' },
     });
   }
 
